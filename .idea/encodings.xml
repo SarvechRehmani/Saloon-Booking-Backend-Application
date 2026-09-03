@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="Encoding">
+    <file url="file://$APPLICATION_HOME_DIR$/bin/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/Booking-Service/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/Category-Service/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/Eureka-Server/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/Gateway-Server/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/Notification-Service/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/Payment-Service/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/Review-Service/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/Saloon-Service/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/ServiceOffering-Service/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/User-Service/src/main/java" charset="UTF-8" />
+  </component>
+</project>

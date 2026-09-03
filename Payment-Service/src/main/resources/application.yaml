@@ -1,0 +1,30 @@
+server:
+  port: 5006
+spring:
+  application:
+    name: Payment-Service
+  datasource:
+    url: jdbc:mysql://localhost:3306/saloon_micro_payment_service?createDatabaseIfNotExist=true
+    username: root
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+  rabbitmq:
+    port: 5672
+    host: localhost
+    username: guest
+    password: guest
+
+stripe:
+  api:
+    key: "script api key"
+
+eureka:
+  instance:
+    hostname: localhost
+  client:
+    register-with-eureka: true
+    fetch-registry: true
+    serviceUrl:
+      defaultZone: http://localhost:8761/eureka/

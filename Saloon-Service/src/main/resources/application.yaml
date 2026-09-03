@@ -1,0 +1,20 @@
+server:
+  port: 5002
+spring:
+  application:
+    name: Saloon-Service
+  datasource:
+    url: jdbc:mysql://localhost:3306/saloon_micro_saloon_service?createDatabaseIfNotExist=true
+    username: root
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+eureka:
+  instance:
+    prefer-ip-address: true
+  client:
+    register-with-eureka: true
+    fetch-registry: true
+    serviceUrl:
+      defaultZone: http://localhost:8761/eureka/
