@@ -1,4 +1,4 @@
-FROM maven:3.9.9-eclipse-temurin-21 AS build
+FROM maven:3.9.9-eclipse-temurin-21-alpine AS build
 
 ARG SERVICE_DIR
 WORKDIR /workspace
@@ -10,7 +10,7 @@ RUN set -eux; \
     test -n "$JAR_FILE"; \
     cp "$JAR_FILE" /workspace/app.jar
 
-FROM eclipse-temurin:21-jre
+FROM eclipse-temurin:21-jre-alpine
 WORKDIR /app
 COPY --from=build /workspace/app.jar /app/app.jar
 ENTRYPOINT ["java", "-jar", "/app/app.jar"]
