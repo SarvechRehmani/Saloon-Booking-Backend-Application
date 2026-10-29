@@ -79,7 +79,7 @@ services:
       timeout: 5s
       retries: 10
       start_period: 15s
-    volumes: [rabbitmq-data:/var/lib/rabbitmq]
+    volumes: [rabbitmq-data:/var/lib/rabbitmq/mnesia]
     networks: [sarvech]
 
   keycloak:
