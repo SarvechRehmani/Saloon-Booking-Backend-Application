@@ -32,20 +32,20 @@ spring:
               uri: lb://SERVICEOFFERING-SERVICE
               predicates:
                 - Path=/api/service-offering/**
-            - id: SALOON-SERVICE
-              uri: lb://SALOON-SERVICE
-              predicates:
-                - Path=/api/saloons/**, /saloons/**, /api/admin/saloons/**
             - id: NOTIFICATION-SERVICE
               uri: lb://NOTIFICATION-SERVICE
               predicates:
                 - Path=/api/notifications/**, /api/notifications/saloon-owner/**
+            - id: REVIEW-SERVICE
+              uri: lb://REVIEW-SERVICE
+              predicates:
+                - Path=/api/reviews/**
 
   security:
     oauth2:
       resourceserver:
         jwt:
-          jwk-set-uri: http://localhost:8080/realms/master/protocol/openid-connect/certs
+          jwk-set-uri: http://localhost:8080/realms/saloon/protocol/openid-connect/certs
 
 eureka:
   instance:

@@ -25,7 +25,7 @@ public class AuthServiceImpl implements AuthService {
     @Override
     public AuthResponse login(String username, String password) {
 
-        TokenResponse tokenResponse = keycloakService.getAdminAccessToken(username, password,"password",null);
+        TokenResponse tokenResponse = keycloakService.getUserAccessToken(username, password,"password",null);
 
         AuthResponse authResponse = new AuthResponse();
         authResponse.setJwt(tokenResponse.getAccessToken());
@@ -46,7 +46,7 @@ public class AuthServiceImpl implements AuthService {
         user.setCreatedAt(LocalDateTime.now());
         userService.createUser(user);
 
-        TokenResponse tokenResponse = keycloakService.getAdminAccessToken(signUpDto.getUsername(),signUpDto.getPassword(),"password",null);
+        TokenResponse tokenResponse = keycloakService.getUserAccessToken(signUpDto.getUsername(),signUpDto.getPassword(),"password",null);
         AuthResponse authResponse = new AuthResponse();
         authResponse.setJwt(tokenResponse.getAccessToken());
         authResponse.setRefreshToken(tokenResponse.getRefreshToken());
@@ -57,7 +57,7 @@ public class AuthServiceImpl implements AuthService {
 
     @Override
     public AuthResponse getAccessTokenFromRefreshToken(String refreshToken) {
-        TokenResponse tokenResponse = keycloakService.getAdminAccessToken(null, null,"refresh_token",refreshToken);
+        TokenResponse tokenResponse = keycloakService.getUserAccessToken(null, null,"refresh_token",refreshToken);
 
         AuthResponse authResponse = new AuthResponse();
         authResponse.setJwt(tokenResponse.getAccessToken());

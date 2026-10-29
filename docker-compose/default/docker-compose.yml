@@ -1,312 +1,290 @@
+x-spring-service: &spring-service
+  SPRING_DATASOURCE_USERNAME: root
+  SPRING_DATASOURCE_PASSWORD: "${MYSQL_ROOT_PASSWORD:-root}"
+  EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka/
+
 services:
   userdb:
-    image: mysql
+    image: mysql:8.4
     container_name: userdb
-    ports:
-      - "3301:3306"
-    healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+    ports: ["3301:3306"]
+    environment: { MYSQL_ROOT_PASSWORD: "${MYSQL_ROOT_PASSWORD:-root}", MYSQL_DATABASE: userdb }
+    healthcheck: &mysql-health
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-p${MYSQL_ROOT_PASSWORD:-root}"]
       interval: 10s
       timeout: 5s
       retries: 10
       start_period: 10s
-    environment:
-      MYSQL_ROOT_PASSWORD: root
-      MYSQL_DATABASE: userdb
-    networks:
-      - sarvech
+    networks: [sarvech]
   bookingdb:
-    image: mysql
+    image: mysql:8.4
     container_name: bookingdb
-    ports:
-      - "3302:3306"
-    healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
-      interval: 10s
-      timeout: 5s
-      retries: 10
-      start_period: 10s
-    environment:
-      MYSQL_ROOT_PASSWORD: root
-      MYSQL_DATABASE: bookingdb
-    networks:
-      - sarvech
+    ports: ["3302:3306"]
+    environment: { MYSQL_ROOT_PASSWORD: "${MYSQL_ROOT_PASSWORD:-root}", MYSQL_DATABASE: bookingdb }
+    healthcheck: *mysql-health
+    networks: [sarvech]
   categorydb:
-    image: mysql
+    image: mysql:8.4
     container_name: categorydb
-    ports:
-      - "3303:3306"
-    healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
-      interval: 10s
-      timeout: 5s
-      retries: 10
-      start_period: 10s
-    environment:
-      MYSQL_ROOT_PASSWORD: root
-      MYSQL_DATABASE: categorydb
-    networks:
-      - sarvech
+    ports: ["3303:3306"]
+    environment: { MYSQL_ROOT_PASSWORD: "${MYSQL_ROOT_PASSWORD:-root}", MYSQL_DATABASE: categorydb }
+    healthcheck: *mysql-health
+    networks: [sarvech]
   paymentdb:
-    image: mysql
+    image: mysql:8.4
     container_name: paymentdb
-    ports:
-      - "3304:3306"
-    healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
-      interval: 10s
-      timeout: 5s
-      retries: 10
-      start_period: 10s
-    environment:
-      MYSQL_ROOT_PASSWORD: root
-      MYSQL_DATABASE: paymentdb
-    networks:
-      - sarvech
+    ports: ["3304:3306"]
+    environment: { MYSQL_ROOT_PASSWORD: "${MYSQL_ROOT_PASSWORD:-root}", MYSQL_DATABASE: paymentdb }
+    healthcheck: *mysql-health
+    networks: [sarvech]
   saloondb:
-    image: mysql
+    image: mysql:8.4
     container_name: saloondb
-    ports:
-      - "3305:3306"
-    healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
-      interval: 10s
-      timeout: 5s
-      retries: 10
-      start_period: 10s
-    environment:
-      MYSQL_ROOT_PASSWORD: root
-      MYSQL_DATABASE: saloondb
-    networks:
-      - sarvech
+    ports: ["3305:3306"]
+    environment: { MYSQL_ROOT_PASSWORD: "${MYSQL_ROOT_PASSWORD:-root}", MYSQL_DATABASE: saloondb }
+    healthcheck: *mysql-health
+    networks: [sarvech]
   serviceofferingdb:
-    image: mysql
+    image: mysql:8.4
     container_name: serviceofferingdb
-    ports:
-      - "3307:3306"
+    ports: ["3307:3306"]
+    environment: { MYSQL_ROOT_PASSWORD: "${MYSQL_ROOT_PASSWORD:-root}", MYSQL_DATABASE: serviceofferingdb }
+    healthcheck: *mysql-health
+    networks: [sarvech]
+  notificationdb:
+    image: mysql:8.4
+    container_name: notificationdb
+    ports: ["3308:3306"]
+    environment: { MYSQL_ROOT_PASSWORD: "${MYSQL_ROOT_PASSWORD:-root}", MYSQL_DATABASE: notificationdb }
+    healthcheck: *mysql-health
+    networks: [sarvech]
+  reviewdb:
+    image: mysql:8.4
+    container_name: reviewdb
+    ports: ["3309:3306"]
+    environment: { MYSQL_ROOT_PASSWORD: "${MYSQL_ROOT_PASSWORD:-root}", MYSQL_DATABASE: reviewdb }
+    healthcheck: *mysql-health
+    networks: [sarvech]
+
+  rabbitmq:
+    image: rabbitmq:4.4.0-management
+    container_name: rabbitmq
+    ports: ["5672:5672", "15672:15672"]
+    environment:
+      RABBITMQ_DEFAULT_USER: "${RABBITMQ_USERNAME:-saloon}"
+      RABBITMQ_DEFAULT_PASS: "${RABBITMQ_PASSWORD:-saloon-local-dev}"
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
       interval: 10s
       timeout: 5s
       retries: 10
-      start_period: 10s
-    environment:
-      MYSQL_ROOT_PASSWORD: root
-      MYSQL_DATABASE: serviceofferingdb
-    networks:
-      - sarvech
+      start_period: 15s
+    volumes: [rabbitmq-data:/var/lib/rabbitmq]
+    networks: [sarvech]
 
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.8.1
+    container_name: keycloak
+    command: ["start-dev", "--import-realm", "--health-enabled=true"]
+    ports: ["8080:8080"]
+    environment:
+      KC_BOOTSTRAP_ADMIN_USERNAME: "${KEYCLOAK_ADMIN_USERNAME:-admin}"
+      KC_BOOTSTRAP_ADMIN_PASSWORD: "${KEYCLOAK_ADMIN_PASSWORD:-admin}"
+    volumes:
+      - ../../keycloak/realm-import:/opt/keycloak/data/import:ro
+      - keycloak-data:/opt/keycloak/data/h2
+    healthcheck:
+      test: ["CMD-SHELL", "bash -c '</dev/tcp/127.0.0.1/9000'"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+      start_period: 30s
+    networks: [sarvech]
 
   eureka-server:
-    image: sarvech/saloon-eureka-server:v1
-    ports:
-      - "8761:8761"
-    healthcheck:
-      test: ["CMD-SHELL", "curl --fail --silent eureka-server:8761/actuator/health | grep UP ||  exit 1"]
-      interval: 10s
-      timeout: 5s
-      retries: 10
-      start_period: 10s
+    build:
+      context: ../..
+      dockerfile: Dockerfile
+      args: { SERVICE_DIR: Eureka-Server }
+    ports: ["8761:8761"]
     container_name: eureka-server
-    deploy:
-      resources:
-        limits:
-          memory: 700m
-    networks:
-      - sarvech
+    environment:
+      SPRING_APPLICATION_NAME: Eureka-Server
+      EUREKA_CLIENT_REGISTER_WITH_EUREKA: "false"
+      EUREKA_CLIENT_FETCH_REGISTRY: "false"
+    networks: [sarvech]
+
   user-service:
-    image: sarvech/saloon-user-service:v1
-    ports:
-      - "5001:5001"
-    healthcheck:
-      test: ["CMD-SHELL", "curl --fail --silent user-service:5001/actuator/health | grep UP ||  exit 1"]
-      interval: 10s
-      timeout: 5s
-      retries: 10
-      start_period: 10s
+    build:
+      context: ../..
+      dockerfile: Dockerfile
+      args: { SERVICE_DIR: User-Service }
+    ports: ["5001:5001"]
     container_name: user-service
     depends_on:
-      userdb:
-        condition: service_healthy
-      eureka-server:
-        condition: service_healthy
+      userdb: { condition: service_healthy }
+      eureka-server: { condition: service_started }
+      keycloak: { condition: service_healthy }
+    networks: [sarvech]
     environment:
+      <<: *spring-service
       SPRING_APPLICATION_NAME: User-Service
       SPRING_DATASOURCE_URL: jdbc:mysql://userdb:3306/userdb?createDatabaseIfNotExist=true
-      SPRING_DATASOURCE_USERNAME: root
-      SPRING_DATASOURCE_PASSWORD: root
-      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka/
-    deploy:
-      resources:
-        limits:
-          memory: 700m
-    networks:
-      - sarvech
+      KEYCLOAK_BASE_URL: http://keycloak:8080
+      KEYCLOAK_REALM: saloon
+      KEYCLOAK_CLIENT_ID: saloon-booking-client
+      KEYCLOAK_ADMIN_USERNAME: "${KEYCLOAK_ADMIN_USERNAME:-admin}"
+      KEYCLOAK_ADMIN_PASSWORD: "${KEYCLOAK_ADMIN_PASSWORD:-admin}"
+
   booking-service:
-    image: sarvech/saloon-booking-service:v1
-    ports:
-      - "5005:5005"
-    healthcheck:
-      test: ["CMD-SHELL", "curl --fail --silent booking-service:5005/actuator/health | grep UP ||  exit 1"]
-      interval: 10s
-      timeout: 5s
-      retries: 10
-      start_period: 10s
+    build:
+      context: ../..
+      dockerfile: Dockerfile
+      args: { SERVICE_DIR: Booking-Service }
+    ports: ["5005:5005"]
     container_name: booking-service
     depends_on:
-      bookingdb:
-        condition: service_healthy
-      eureka-server:
-        condition: service_healthy
+      bookingdb: { condition: service_healthy }
+      eureka-server: { condition: service_started }
+      rabbitmq: { condition: service_healthy }
     environment:
+      <<: *spring-service
       SPRING_APPLICATION_NAME: Booking-Service
       SPRING_DATASOURCE_URL: jdbc:mysql://bookingdb:3306/bookingdb?createDatabaseIfNotExist=true
-      SPRING_DATASOURCE_USERNAME: root
-      SPRING_DATASOURCE_PASSWORD: root
-      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka/
-    deploy:
-      resources:
-        limits:
-          memory: 700m
-    networks:
-      - sarvech
+      SPRING_RABBITMQ_HOST: rabbitmq
+      SPRING_RABBITMQ_PORT: 5672
+      SPRING_RABBITMQ_USERNAME: "${RABBITMQ_USERNAME:-saloon}"
+      SPRING_RABBITMQ_PASSWORD: "${RABBITMQ_PASSWORD:-saloon-local-dev}"
+    networks: [sarvech]
+
   category-service:
-    image: sarvech/saloon-category-service:v1
-    ports:
-      - "5003:5003"
-    healthcheck: 
-      test: ["CMD-SHELL", "curl --fail --silent category-service:5003/actuator/health | grep UP ||  exit 1"]
-      interval: 10s
-      timeout: 5s
-      retries: 10
-      start_period: 10s
+    build:
+      context: ../..
+      dockerfile: Dockerfile
+      args: { SERVICE_DIR: Category-Service }
+    ports: ["5003:5003"]
     container_name: category-service
     depends_on:
-      categorydb:
-        condition: service_healthy
-      eureka-server:
-        condition: service_healthy
+      categorydb: { condition: service_healthy }
+      eureka-server: { condition: service_started }
     environment:
+      <<: *spring-service
       SPRING_APPLICATION_NAME: Category-Service
       SPRING_DATASOURCE_URL: jdbc:mysql://categorydb:3306/categorydb?createDatabaseIfNotExist=true
-      SPRING_DATASOURCE_USERNAME: root
-      SPRING_DATASOURCE_PASSWORD: root
-      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka/
-    deploy:
-      resources:
-        limits:
-          memory: 700m
-    networks:
-      - sarvech
+    networks: [sarvech]
+
   payment-service:
-    image: sarvech/saloon-payment-service:v1
-    ports:
-      - "5006:5006"
-    healthcheck:
-      test: ["CMD-SHELL", "curl --fail --silent payment-service:5006/actuator/health | grep UP ||  exit 1"]
-      interval: 10s
-      timeout: 5s
-      retries: 10
-      start_period: 10s
+    build:
+      context: ../..
+      dockerfile: Dockerfile
+      args: { SERVICE_DIR: Payment-Service }
+    ports: ["5006:5006"]
     container_name: payment-service
     depends_on:
-      paymentdb:
-        condition: service_healthy
-      eureka-server:
-        condition: service_healthy
+      paymentdb: { condition: service_healthy }
+      eureka-server: { condition: service_started }
+      rabbitmq: { condition: service_healthy }
     environment:
+      <<: *spring-service
       SPRING_APPLICATION_NAME: Payment-Service
       SPRING_DATASOURCE_URL: jdbc:mysql://paymentdb:3306/paymentdb?createDatabaseIfNotExist=true
-      SPRING_DATASOURCE_USERNAME: root
-      SPRING_DATASOURCE_PASSWORD: root
-      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka/
-      STRIPE_API_KEY: ${STRIPE_API_KEY:-}
-      STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET:-}
-    deploy:
-      resources:
-        limits:
-          memory: 700m
-    networks:
-      - sarvech
+      SPRING_RABBITMQ_HOST: rabbitmq
+      SPRING_RABBITMQ_PORT: 5672
+      SPRING_RABBITMQ_USERNAME: "${RABBITMQ_USERNAME:-saloon}"
+      SPRING_RABBITMQ_PASSWORD: "${RABBITMQ_PASSWORD:-saloon-local-dev}"
+      STRIPE_API_KEY: "${STRIPE_API_KEY:-}"
+      STRIPE_WEBHOOK_SECRET: "${STRIPE_WEBHOOK_SECRET:-}"
+    networks: [sarvech]
+
   saloon-service:
-    image: sarvech/saloon-saloon-service:v1
-    ports:
-      - "5002:5002"
-    healthcheck:
-      test: ["CMD-SHELL", "curl --fail --silent saloon-service:5002/actuator/health | grep UP ||  exit 1"]
-      interval: 10s
-      timeout: 5s
-      retries: 10
-      start_period: 10s
+    build:
+      context: ../..
+      dockerfile: Dockerfile
+      args: { SERVICE_DIR: Saloon-Service }
+    ports: ["5002:5002"]
     container_name: saloon-service
     depends_on:
-      saloondb:
-        condition: service_healthy
-      eureka-server:
-        condition: service_healthy
+      saloondb: { condition: service_healthy }
+      eureka-server: { condition: service_started }
     environment:
+      <<: *spring-service
       SPRING_APPLICATION_NAME: Saloon-Service
       SPRING_DATASOURCE_URL: jdbc:mysql://saloondb:3306/saloondb?createDatabaseIfNotExist=true
-      SPRING_DATASOURCE_USERNAME: root
-      SPRING_DATASOURCE_PASSWORD: root
-      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka/
-    deploy:
-      resources:
-        limits:
-          memory: 700m
-    networks:
-      - sarvech
+    networks: [sarvech]
+
   service-offering-service:
-    image: sarvech/saloon-service-offering-service:v1
-    ports:
-      - "5004:5004"
-    healthcheck:
-      test: ["CMD-SHELL", "curl --fail --silent service-offering-service:5004/actuator/health | grep UP ||  exit 1"]
-      interval: 10s
-      timeout: 5s
-      retries: 10
-      start_period: 10s
+    build:
+      context: ../..
+      dockerfile: Dockerfile
+      args: { SERVICE_DIR: ServiceOffering-Service }
+    ports: ["5004:5004"]
     container_name: service-offering-service
     depends_on:
-      serviceofferingdb:
-        condition: service_healthy
-      eureka-server:
-        condition: service_healthy
+      serviceofferingdb: { condition: service_healthy }
+      eureka-server: { condition: service_started }
     environment:
+      <<: *spring-service
       SPRING_APPLICATION_NAME: ServiceOffering-Service
       SPRING_DATASOURCE_URL: jdbc:mysql://serviceofferingdb:3306/serviceofferingdb?createDatabaseIfNotExist=true
-      SPRING_DATASOURCE_USERNAME: root
-      SPRING_DATASOURCE_PASSWORD: root
-      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka/
-    deploy:
-      resources:
-        limits:
-          memory: 700m
-    networks:
-      - sarvech
+    networks: [sarvech]
+
+  notification-service:
+    build:
+      context: ../..
+      dockerfile: Dockerfile
+      args: { SERVICE_DIR: Notification-Service }
+    ports: ["5007:5007"]
+    container_name: notification-service
+    depends_on:
+      notificationdb: { condition: service_healthy }
+      eureka-server: { condition: service_started }
+      rabbitmq: { condition: service_healthy }
+    environment:
+      <<: *spring-service
+      SPRING_APPLICATION_NAME: Notification-Service
+      SPRING_DATASOURCE_URL: jdbc:mysql://notificationdb:3306/notificationdb?createDatabaseIfNotExist=true
+      SPRING_RABBITMQ_HOST: rabbitmq
+      SPRING_RABBITMQ_PORT: 5672
+      SPRING_RABBITMQ_USERNAME: "${RABBITMQ_USERNAME:-saloon}"
+      SPRING_RABBITMQ_PASSWORD: "${RABBITMQ_PASSWORD:-saloon-local-dev}"
+    networks: [sarvech]
+
+  review-service:
+    build:
+      context: ../..
+      dockerfile: Dockerfile
+      args: { SERVICE_DIR: Review-Service }
+    ports: ["5008:5008"]
+    container_name: review-service
+    depends_on:
+      reviewdb: { condition: service_healthy }
+      eureka-server: { condition: service_started }
+    environment:
+      <<: *spring-service
+      SPRING_APPLICATION_NAME: Review-Service
+      SPRING_DATASOURCE_URL: jdbc:mysql://reviewdb:3306/reviewdb?createDatabaseIfNotExist=true
+    networks: [sarvech]
+
   gateway-server:
-    image: sarvech/saloon-gateway-server:v1
-    ports:
-      - "5000:5000"
-    healthcheck:
-      test: ["CMD-SHELL", "curl --fail --silent gateway-server:5000/actuator/health | grep UP ||  exit 1"]
-      interval: 10s
-      timeout: 5s
-      retries: 10
-      start_period: 10s
+    build:
+      context: ../..
+      dockerfile: Dockerfile
+      args: { SERVICE_DIR: Gateway-Server }
+    ports: ["5000:5000"]
     container_name: gateway-server
     depends_on:
-      eureka-server:
-        condition: service_healthy
+      eureka-server: { condition: service_started }
+      keycloak: { condition: service_healthy }
     environment:
       SPRING_APPLICATION_NAME: Gateway-Server
       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka/
-    deploy:
-      resources:
-        limits:
-          memory: 700m
-    networks:
-      - sarvech
+      SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWK_SET_URI: http://keycloak:8080/realms/saloon/protocol/openid-connect/certs
+    networks: [sarvech]
+
 networks:
   sarvech:
     driver: bridge
+
+volumes:
+  rabbitmq-data:
+  keycloak-data:

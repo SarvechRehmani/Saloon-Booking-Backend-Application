@@ -1,0 +1,28 @@
+{
+  "realm": "saloon",
+  "enabled": true,
+  "roles": {
+    "realm": [
+      { "name": "CUSTOMER" },
+      { "name": "SALOON_OWNER" },
+      { "name": "ADMIN" }
+    ]
+  },
+  "clients": [
+    {
+      "clientId": "saloon-booking-client",
+      "name": "Saloon Booking Client",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "publicClient": true,
+      "standardFlowEnabled": true,
+      "directAccessGrantsEnabled": true,
+      "serviceAccountsEnabled": false,
+      "redirectUris": ["http://localhost:5170/*", "http://localhost:3000/*"],
+      "webOrigins": ["http://localhost:5170", "http://localhost:3000"],
+      "attributes": {
+        "post.logout.redirect.uris": "http://localhost:5170/*##http://localhost:3000/*"
+      }
+    }
+  ]
+}
