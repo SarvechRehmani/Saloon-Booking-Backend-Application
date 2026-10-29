@@ -12,6 +12,7 @@ import com.saloon.services.clients.SaloonFeignClient;
 import com.saloon.services.clients.ServiceOfferingFeignClient;
 import com.saloon.services.clients.UserFeignClient;
 import lombok.RequiredArgsConstructor;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -77,22 +78,33 @@ public class BookingController {
     }
 
     @PutMapping("/{bookingId}/{status}")
-    public Booking updateBookingStatus(@PathVariable Long bookingId, @RequestParam BookingStatus status) {
+    public Booking updateBookingStatus(@PathVariable Long bookingId, @PathVariable BookingStatus status) {
         return bookingService.updateBookingStatus(bookingId, status);
     }
 
     @GetMapping("/slots/saloon/{saloonId}/date/{date}")
-    public ResponseEntity<List<BookingSlotDto>> getBookedSlots(@PathVariable Long saloonId, @RequestParam(required = false) LocalDate date) {
-        List<Booking> bookings = bookingService.getBookingsByDate(date,saloonId);
-        List<BookingSlotDto> slotsDtos = bookings.stream()
+    public ResponseEntity<List<BookingSlotDto>> getBookedSlotsByDate(
+            @PathVariable Long saloonId,
+            @PathVariable @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
+        return ResponseEntity.ok(toBookingSlotDtos(bookingService.getBookingsByDate(date, saloonId)));
+    }
+
+    @GetMapping("/slots/saloon/{saloonId}")
+    public ResponseEntity<List<BookingSlotDto>> getBookedSlots(
+            @PathVariable Long saloonId,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
+        return ResponseEntity.ok(toBookingSlotDtos(bookingService.getBookingsByDate(date, saloonId)));
+    }
+
+    private List<BookingSlotDto> toBookingSlotDtos(List<Booking> bookings) {
+        return bookings.stream()
                 .map(booking -> {
                     BookingSlotDto slotDto = new BookingSlotDto();
                     slotDto.setStartTime(booking.getStartTime());
                     slotDto.setEndTime(booking.getEndTime());
                     return slotDto;
-
-                }).toList();
-        return ResponseEntity.ok(slotsDtos);
+                })
+                .toList();
     }
 
     @GetMapping("/report/{saloonId}")

@@ -28,6 +28,7 @@ public class SecurityConfig {
         http
             .authorizeExchange(exchange -> exchange
                     .pathMatchers("/auth/**").permitAll()
+                    .pathMatchers("/api/payments/webhook").permitAll()
                     .pathMatchers("/api/notifications/ws/**").permitAll()
                     .pathMatchers(
                             "/api/categories/saloon-owner",

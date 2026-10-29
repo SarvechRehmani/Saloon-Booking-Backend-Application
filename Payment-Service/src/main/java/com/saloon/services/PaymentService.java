@@ -6,7 +6,7 @@ import com.saloon.payloads.dtos.BookingDto;
 import com.saloon.payloads.dtos.UserDto;
 import com.saloon.payloads.response.PaymentLinkResponse;
 import com.stripe.exception.StripeException;
-import com.stripe.model.PaymentLink;
+import com.stripe.model.checkout.Session;
 
 public interface PaymentService {
 
@@ -14,7 +14,6 @@ public interface PaymentService {
 
     PaymentOrder getPaymentOrderById(Long id);
     PaymentOrder getPaymentOrderByPaymentId(String paymentLinkId);
-//    PaymentLink createRazorPaymentLink(UserDto userDto, Long amount, Long orderId);
-    String createStripePaymentLink(UserDto userDto, Long Long, Long orderId) throws StripeException;
-    Boolean proceedPayment(PaymentOrder paymentOrder, String paymentId, String paymentLinkId);
+    Session createStripeCheckoutSession(Long amount, Long orderId) throws StripeException;
+    void processStripeCheckoutSession(Session session);
 }
