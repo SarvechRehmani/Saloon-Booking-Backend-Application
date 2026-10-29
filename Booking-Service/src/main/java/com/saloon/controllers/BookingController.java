@@ -15,6 +15,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
@@ -34,12 +35,26 @@ public class BookingController {
 
     @PostMapping
     public ResponseEntity<PaymentLinkResponse> createBooking(@RequestParam Long saloonId, @RequestParam PaymentMethod paymentMethod, @RequestBody BookingRequestDto bookingRequest, @RequestHeader("Authorization") String jwt) {
-        UserDto userDto = this.userFeignClient.getUserProfile(jwt).getBody();
-
+        UserDto userDto = getCurrentUser(jwt);
         SaloonDto saloonDto = this.saloonFeignClient.getSaloonById(saloonId).getBody();
+        if (saloonDto == null || saloonDto.getId() == null) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Saloon not found");
+        }
+
+        Set<Long> requestedServiceIds = bookingRequest == null ? null : bookingRequest.getServiceIds();
+        if (requestedServiceIds == null || requestedServiceIds.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "At least one service is required");
+        }
         Set<ServiceDto> serviceDtoSet = serviceFeignClient.getServicesByIds(bookingRequest.getServiceIds()).getBody();
-        if(serviceDtoSet == null || serviceDtoSet.isEmpty()){
-            throw new RuntimeException("Service not found.");
+        if (serviceDtoSet == null || serviceDtoSet.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Requested services not found");
+        }
+        Set<Long> returnedServiceIds = serviceDtoSet.stream().map(ServiceDto::getId).collect(Collectors.toSet());
+        if (returnedServiceIds.size() != requestedServiceIds.size() || !returnedServiceIds.equals(requestedServiceIds)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "All requested services must exist");
+        }
+        if (serviceDtoSet.stream().anyMatch(service -> !saloonId.equals(service.getSaloonId()))) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Every selected service must belong to the requested saloon");
         }
         Booking booking = bookingService.createBooking(bookingRequest, userDto, saloonDto, serviceDtoSet);
         BookingDto bookingDto = BookingMapper.toBookingDto(booking);
@@ -73,13 +88,47 @@ public class BookingController {
     }
 
     @GetMapping("/{bookingId}")
-    public ResponseEntity<BookingDto> getBookingById(@PathVariable Long bookingId) {
-        return ResponseEntity.ok(BookingMapper.toBookingDto(bookingService.getBookingById(bookingId)));
+    public ResponseEntity<BookingDto> getBookingById(
+            @PathVariable Long bookingId,
+            @RequestHeader("Authorization") String jwt) {
+        Booking booking = bookingService.getBookingById(bookingId);
+        assertCanAccessBooking(getCurrentUser(jwt), booking);
+        return ResponseEntity.ok(BookingMapper.toBookingDto(booking));
     }
 
     @PutMapping("/{bookingId}/{status}")
-    public Booking updateBookingStatus(@PathVariable Long bookingId, @PathVariable BookingStatus status) {
+    public Booking updateBookingStatus(
+            @PathVariable Long bookingId,
+            @PathVariable BookingStatus status,
+            @RequestHeader("Authorization") String jwt) {
+        UserDto currentUser = getCurrentUser(jwt);
+        if (status != BookingStatus.CANCELLED) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Only cancellation is allowed here; payment confirms bookings");
+        }
+        Booking booking = bookingService.getBookingById(bookingId);
+        assertCanAccessBooking(currentUser, booking);
         return bookingService.updateBookingStatus(bookingId, status);
+    }
+
+    private UserDto getCurrentUser(String jwt) {
+        UserDto user = userFeignClient.getUserProfile(jwt).getBody();
+        if (user == null || user.getId() == null) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "User could not be resolved from the access token");
+        }
+        return user;
+    }
+
+    private void assertCanAccessBooking(UserDto user, Booking booking) {
+        if ("ADMIN".equalsIgnoreCase(user.getRole()) || user.getId().equals(booking.getCustomerId())) {
+            return;
+        }
+
+        SaloonDto saloon = saloonFeignClient.getSaloonById(booking.getSaloonId()).getBody();
+        if (saloon != null && user.getId().equals(saloon.getOwnerId())) {
+            return;
+        }
+
+        throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You are not allowed to access this booking");
     }
 
     @GetMapping("/slots/saloon/{saloonId}/date/{date}")
